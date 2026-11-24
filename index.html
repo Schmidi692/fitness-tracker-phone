@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2B2B2B">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Fitness">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <title>Fitness-Tracker</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #2B2B2B;
+      --muted: #5A5A5A;
+      --line: #2B2B2B33;
+      --paper: #FFFFFF;
+      --canvas: #F5F5F5;
+      --nav: #2B2B2B;
+      --nav-ink: #F5F5F5;
+      --accent: #CE2028;
+      --accent-ink: #FFFFFF;
+      --accent-soft: #FFEE00;
+      --accent-ring: #CE202866;
+      --good: #1F6B2A;
+      --bad: #CE2028;
+      --tint: #2B2B2B12;
+      --chart-int: #CE2028;
+      --chart-z2: #7A7A7A;
+      --chart-son: #C9A800;
+      font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+      font-size: 16px;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --ink: #ECECEC; --muted: #B8B8B8; --line: #ECECEC33; --paper: #262626; --canvas: #161616;
+      --nav: #0E0E0E; --nav-ink: #ECECEC; --accent: #E5424A; --accent-ink: #1A1A1A; --accent-soft: #5C5400;
+      --accent-ring: #E5424A66; --good: #7BC67E; --bad: #FF7B7B; --tint: #FFFFFF14;
+      --chart-int: #E5424A; --chart-z2: #9A9A9A; --chart-son: #E0C800;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--canvas); color: var(--ink); }
+    body { min-height: 100vh; min-height: 100dvh; -webkit-text-size-adjust: 100%; }
+    header.top {
+      position: sticky; top: 0; z-index: 5; background: var(--nav); color: var(--nav-ink);
+      padding: calc(10px + env(safe-area-inset-top)) 16px 10px; display: flex; align-items: baseline; gap: 12px;
+      border-bottom: 3px solid var(--accent);
+    }
+    header.top h1 { font-size: 1.1rem; margin: 0; letter-spacing: .02em; }
+    header.top .sub { font-size: .8rem; opacity: .8; margin-left: auto; text-align: right; }
+    main { padding: 14px 14px calc(92px + env(safe-area-inset-bottom)); max-width: 720px; margin: 0 auto; }
+    nav.tabs {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; background: var(--nav);
+      padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid var(--line);
+    }
+    nav.tabs button {
+      flex: 1; min-height: 56px; background: none; border: 0; color: var(--nav-ink); opacity: .75;
+      font: inherit; font-size: .78rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+      border-top: 3px solid transparent;
+    }
+    nav.tabs button .ic { font-size: 1.25rem; line-height: 1; }
+    nav.tabs button[aria-current="page"] { opacity: 1; border-top-color: var(--accent); font-weight: 600; }
+    h2 { font-size: 1.15rem; margin: 18px 2px 8px; }
+    h3 { font-size: 1rem; margin: 0 0 6px; }
+    .card { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin: 0 0 12px; }
+    .card.accent { border-left: 5px solid var(--accent); }
+    .card.warn { border-left: 5px solid var(--accent-soft); }
+    .muted { color: var(--muted); font-size: .88rem; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .row.between { justify-content: space-between; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    .kpi { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 10px 8px; text-align: center; }
+    .kpi b { display: block; font-size: 1.5rem; line-height: 1.2; }
+    .kpi span { font-size: .75rem; color: var(--muted); }
+    button.btn {
+      font: inherit; min-height: 48px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+      background: var(--paper); color: var(--ink); cursor: pointer; touch-action: manipulation;
+    }
+    button.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+    button.btn.danger { color: var(--bad); }
+    button.btn.small { min-height: 40px; padding: 6px 10px; font-size: .9rem; }
+    button.btn.block { width: 100%; text-align: left; }
+    button.btn:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent-ring); outline-offset: 1px; }
+    label.f { display: block; font-size: .8rem; color: var(--muted); }
+    label.f > input, label.f > select, label.f > textarea { display: block; width: 100%; margin-top: 3px; }
+    input, select, textarea {
+      font: inherit; font-size: 16px; color: var(--ink); background: var(--canvas); border: 1px solid var(--line);
+      border-radius: 8px; padding: 10px; min-height: 44px;
+    }
+    textarea { min-height: 70px; }
+    .block-box { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin: 0 0 10px; background: var(--tint); }
+    .set { display: grid; grid-template-columns: 36px 1fr 1fr 44px; gap: 8px; align-items: end; margin-top: 6px; }
+    .set .n { padding-bottom: 12px; color: var(--muted); font-size: .85rem; }
+    .pill { display: inline-block; font-size: .75rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); margin-right: 4px; }
+    .modal { position: fixed; inset: 0; z-index: 20; background: var(--canvas); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .modal .bar {
+      position: sticky; top: 0; z-index: 2; background: var(--nav); color: var(--nav-ink); display: flex; align-items: center;
+      gap: 10px; padding: calc(10px + env(safe-area-inset-top)) 14px 10px; border-bottom: 3px solid var(--accent);
+    }
+    .modal .bar h2 { margin: 0; font-size: 1.05rem; flex: 1; }
+    .modal .bar .btn { min-height: 40px; }
+    .modal .body { padding: 14px 14px calc(40px + env(safe-area-inset-bottom)); max-width: 720px; margin: 0 auto; }
+    .toast {
+      position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 30;
+      background: var(--nav); color: var(--nav-ink); padding: 10px 16px; border-radius: 10px; border: 1px solid var(--line); max-width: 90vw;
+    }
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: .8rem; margin-top: 6px; }
+    .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+    svg.chart { width: 100%; height: auto; display: block; }
+    svg.chart text { fill: var(--muted); font-size: 10px; font-family: inherit; }
+    svg.chart .grid { stroke: var(--line); stroke-width: 1; }
+    svg.chart .c-int { fill: var(--chart-int); }
+    svg.chart .c-z2 { fill: var(--chart-z2); }
+    svg.chart .c-son { fill: var(--chart-son); }
+    svg.chart .ln { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+    svg.chart .dot { fill: var(--accent); }
+    svg.chart text.val { fill: var(--ink); font-weight: 600; }
+    table.plan { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    table.plan th, table.plan td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .hist-title { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; }
+    ul.plain { margin: 6px 0 0; padding-left: 18px; }
+    .sr { position: absolute; left: -9999px; }
+  </style>
+</head>
+<body>
+  <header class="top"><h1>Fitness · Atemschutz</h1><span class="sub" id="topsub"></span></header>
+  <main id="app" aria-live="polite"></main>
+  <nav class="tabs" id="tabs" aria-label="Hauptnavigation"></nav>
+  <div id="overlay"></div>
+  <div id="toastbox"></div>
+
+<script>
+'use strict';
+
+/* ======================= Konstanten ======================= */
+const DB_NAME = 'fitness-tracker';
+const APP_VERSION = 'phone-1.1.0';
+const SCHEMA = 1;
+const COLLECTIONS = ['sessions', 'tests'];
+const CLOCK_SKEW_MS = 5 * 60 * 1000;
+
+const PHASES = [
+  { id: 1, name: 'Basis', von: '2026-11-23', bis: '2027-01-31',
+    fokus: 'Technik, Zone 2 aufbauen, Intervalle 4×4 kennenlernen', kraft: '3 × 8–10 Wdh.', zone2: '40 → 60 min', weste: 'noch keine' },
+  { id: 2, name: 'Aufbau', von: '2027-02-01', bis: '2027-04-30',
+    fokus: 'Intervalle von 4×4 auf 5×4 steigern, Kraft schwerer', kraft: '4 × 5–6 Wdh.', zone2: '50–60 min', weste: 'ab 5 kg' },
+  { id: 3, name: 'Spezifisch', von: '2027-05-01', bis: '2027-06-30',
+    fokus: 'Stepper/Treppe mit Weste, Kraftausdauer-Zirkel, Bodenarbeit (Kriechen, Aufstehen unter Last)', kraft: 'Zirkel', zone2: '60 min', weste: '10–15 kg' },
+  { id: 4, name: 'Peak', von: '2027-07-01', bis: '2027-08-31',
+    fokus: 'Belastung halten, Entlastungswoche vor der Strecke', kraft: 'halten', zone2: '60 min', weste: '10–15 kg' }
+];
+
+const TYPEN = {
+  tag1: 'Tag 1 · Intervalle + Kraft',
+  tag2: 'Tag 2 · Grundlage + Kraft',
+  alltag: 'Alltag · Gehen/Rad',
+  frei: 'Freies Training'
+};
+const ARTEN = { zone2: 'Zone 2 (locker)', intervall: 'Intervalle', sonst: 'Sonstiges / Aufwärmen' };
+const GERAETE = ['Rad', 'Rudern', 'Crosstrainer', 'Stepper/Treppe', 'Laufband', 'Gehen'];
+const UEBUNGEN = [
+  'Kniebeuge zur Bank', 'Rumänisches Kreuzheben', 'Latzug / Klimmzug', 'Core', 'Beinpresse', 'Bankdrücken',
+  'Schulterdrücken', 'Rudern Langhantel', "Farmer's Walk", 'Kreuzheben', 'Hip Thrust', 'Seitstütz'
+];
+const TESTS = {
+  rudern2000: { name: 'Rudern 2000 m', unit: 'mm:ss', type: 'time', better: 'lower', hr: true },
+  cooper: { name: '12-Minuten-Test (Distanz)', unit: 'm', type: 'num', better: 'higher', hr: true },
+  weste: { name: 'Treppe/Stepper mit Weste (festes Pensum)', unit: 'mm:ss', type: 'time', better: 'lower', hr: true },
+  klimmzug: { name: 'Klimmzüge (max.)', unit: 'Wdh.', type: 'num', better: 'higher' },
+  farmer: { name: "Farmer's Walk", unit: 'kg je Hand', type: 'num', better: 'higher' },
+  ruhepuls: { name: 'Ruhepuls', unit: 'bpm', type: 'num', better: 'lower' },
+  gewicht: { name: 'Körpergewicht', unit: 'kg', type: 'num', better: 'neutral' }
+};
+
+/* ======================= Zustand ======================= */
+const state = {
+  rec: new Map(),
+  settings: { theme: 'auto', maxHr: 186, streckeDatum: '', lastExport: 0 },
+  view: 'heute',
+  draft: null,
+  draftId: null,
+  chartExercise: '',
+  toastTimer: null
+};
+let db = null;
+
+/* ======================= Hilfsfunktionen ======================= */
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  let value;
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'text') el.textContent = v;
+    else if (k === 'value') value = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'checked' || k === 'disabled' || k === 'selected') el[k] = true;
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat(Infinity)) {
+    if (kid == null || kid === false) continue;
+    el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  if (value !== undefined) el.value = value;
+  return el;
+}
+const SVGNS = 'http://www.w3.org/2000/svg';
+function s(tag, attrs, ...kids) {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === 'text') el.textContent = v; else el.setAttribute(k, v);
+  }
+  kids.flat().forEach(k => k && el.append(k));
+  return el;
+}
+const pad = n => String(n).padStart(2, '0');
+function ymd(d = new Date()) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function parseYmd(str) { const [y, m, d] = String(str).split('-').map(Number); return new Date(y, m - 1, d); }
+function addDays(str, n) { const d = parseYmd(str); d.setDate(d.getDate() + n); return ymd(d); }
+function weekStart(str) { const d = parseYmd(str); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return ymd(d); }
+function daysBetween(a, b) { return Math.round((parseYmd(b) - parseYmd(a)) / 86400000); }
+function fmtDate(str) { return parseYmd(str).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }); }
+function fmtShort(str) { const d = parseYmd(str); return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.'; }
+function fmtNum(n, max = 1) { return n == null ? '–' : Number(n).toLocaleString('de-DE', { maximumFractionDigits: max }); }
+function fmtTime(sec) {
+  let m = Math.floor(sec / 60), r = Math.round(sec - m * 60);
+  if (r === 60) { m += 1; r = 0; }
+  return m + ':' + pad(r);
+}
+function parseTime(str) {
+  const m = /^\s*(\d{1,3}):([0-5]\d)\s*$/.exec(String(str));
+  return m ? (+m[1]) * 60 + (+m[2]) : null;
+}
+function num(v) {
+  if (v === '' || v == null) return null;
+  const n = Number(String(v).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+function clamp(n, lo, hi) { return n == null ? null : Math.min(hi, Math.max(lo, n)); }
+function str(v, max) { return typeof v === 'string' ? v.trim().slice(0, max) : ''; }
+function uid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+}
+function toast(msg) {
+  const box = document.getElementById('toastbox');
+  box.replaceChildren(h('div', { class: 'toast', role: 'status', text: msg }));
+  clearTimeout(state.toastTimer);
+  state.toastTimer = setTimeout(() => box.replaceChildren(), 3200);
+}
+
+/* ======================= Datenbereinigung ======================= */
+function cleanSession(d) {
+  d = d && typeof d === 'object' ? d : {};
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(d.date) ? d.date : ymd();
+  const typ = Object.keys(TYPEN).includes(d.typ) ? d.typ : 'frei';
+  const cardio = (Array.isArray(d.cardio) ? d.cardio : []).slice(0, 20).map(c => {
+    c = c && typeof c === 'object' ? c : {};
+    return {
+      art: Object.keys(ARTEN).includes(c.art) ? c.art : 'sonst', geraet: str(c.geraet, 40),
+      min: clamp(num(c.min), 0, 600), avg: clamp(num(c.avg), 30, 250), max: clamp(num(c.max), 30, 250), weste: clamp(num(c.weste), 0, 100)
+    };
+  }).filter(c => c.min > 0);
+  const kraft = (Array.isArray(d.kraft) ? d.kraft : []).slice(0, 40).map(k => {
+    k = k && typeof k === 'object' ? k : {};
+    return {
+      uebung: str(k.uebung, 60),
+      sets: (Array.isArray(k.sets) ? k.sets : []).slice(0, 20).map(x => {
+        x = x && typeof x === 'object' ? x : {};
+        return { wdh: clamp(num(x.wdh), 0, 1000), kg: clamp(num(x.kg), 0, 1000) };
+      }).filter(x => x.wdh != null || x.kg != null)
+    };
+  }).filter(k => k.uebung && k.sets.length);
+  return { date, typ, cardio, kraft, rpe: clamp(num(d.rpe), 1, 10), knie: clamp(num(d.knie), 0, 10), notiz: str(d.notiz, 500) };
+}
+function cleanTest(d) {
+  d = d && typeof d === 'object' ? d : {};
+  const test = Object.keys(TESTS).includes(d.test) ? d.test : null;
+  const value = num(d.value);
+  if (!test || value == null || value < 0) return null;
+  return {
+    test, value, date: /^\d{4}-\d{2}-\d{2}$/.test(d.date) ? d.date : ymd(),
+    hr: clamp(num(d.hr), 30, 250), note: str(d.note, 300)
+  };
+}
+
+/* ======================= Zusammenführen (reine Funktion) =======================
+   Last-write-wins je Datensatz, Löschen über Tombstones (_d), Uhr-Schutz (+5 min).
+   Dasselbe Verfahren soll später der Server beim Abgleich verwenden. */
+function mergeRecords(local, incoming, nowMs) {
+  const cap = nowMs + CLOCK_SKEW_MS;
+  const byId = new Map(local.map(r => [r.id, r]));
+  const toPut = [];
+  const stats = { neu: 0, aktualisiert: 0, geloescht: 0, unveraendert: 0 };
+  for (const inc of incoming) {
+    const m = Math.min(inc._m, cap);
+    const cur = byId.get(inc.id);
+    if (cur && m <= cur._m) { stats.unveraendert++; continue; }
+    const next = { ...inc, _m: m };
+    toPut.push(next);
+    byId.set(next.id, next);
+    if (next._d) stats.geloescht++; else if (cur) stats.aktualisiert++; else stats.neu++;
+  }
+  return { toPut, stats };
+}
+
+function validateExport(obj) {
+  if (!obj || typeof obj !== 'object' || obj.app !== 'fitness-tracker') throw new Error('Das ist keine Sicherung des Fitness-Trackers.');
+  if (!Number.isInteger(obj.schema) || obj.schema > SCHEMA) throw new Error('Die Sicherung stammt von einer neueren App-Version.');
+  if (!Array.isArray(obj.records) || obj.records.length > 100000) throw new Error('Die Sicherung enthält keine gültige Datensatzliste.');
+  const out = [];
+  for (const r of obj.records) {
+    if (!r || typeof r.id !== 'string' || r.id.length > 80 || !COLLECTIONS.includes(r.col) || !Number.isFinite(r._m)) continue;
+    if (r._d) { out.push({ id: r.id, col: r.col, _m: r._m, _d: true }); continue; }
+    const d = r.col === 'sessions' ? cleanSession(r.d) : cleanTest(r.d);
+    if (d) out.push({ id: r.id, col: r.col, _m: r._m, _d: false, d });
+  }
+  return out;
+}
+
+/* ======================= IndexedDB ======================= */
+function openDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const d = req.result;
+      d.createObjectStore('records', { keyPath: 'id' }).createIndex('col', 'col');
+      d.createObjectStore('meta', { keyPath: 'key' });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+function tx(store, mode, fn) {
+  return new Promise((resolve, reject) => {
+    const t = db.transaction(store, mode);
+    const out = fn(t.objectStore(store));
+    t.oncomplete = () => resolve(out && out.result !== undefined ? out.result : undefined);
+    t.onerror = () => reject(t.error);
+    t.onabort = () => reject(t.error || new Error('Speichern abgebrochen'));
+  });
+}
+async function loadAll() {
+  const recs = await tx('records', 'readonly', st => st.getAll());
+  state.rec = new Map((recs || []).map(r => [r.id, r]));
+  const meta = await tx('meta', 'readonly', st => st.get('settings'));
+  if (meta && meta.value) Object.assign(state.settings, meta.value);
+}
+async function putRec(rec) {
+  await tx('records', 'readwrite', st => st.put(rec));
+  state.rec.set(rec.id, rec);
+}
+async function putMany(recs) {
+  if (!recs.length) return;
+  await tx('records', 'readwrite', st => { recs.forEach(r => st.put(r)); });
+  recs.forEach(r => state.rec.set(r.id, r));
+}
+async function saveSettings() {
+  await tx('meta', 'readwrite', st => st.put({ key: 'settings', value: state.settings }));
+}
+function live(col) { return [...state.rec.values()].filter(r => r.col === col && !r._d); }
+async function removeRec(id) {
+  const cur = state.rec.get(id);
+  if (!cur) return;
+  await putRec({ id, col: cur.col, _m: Date.now(), _d: true });
+}
+async function askPersist() {
+  try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) { /* optional */ }
+}
+
+/* ======================= Fachlogik ======================= */
+function sessions() {
+  return live('sessions').sort((a, b) => (b.d.date.localeCompare(a.d.date)) || (b._m - a._m));
+}
+function tests() { return live('tests'); }
+function currentPhase(dateStr) {
+  return PHASES.find(p => dateStr >= p.von && dateStr <= p.bis) || (dateStr < PHASES[0].von ? PHASES[0] : PHASES[PHASES.length - 1]);
+}
+function hrZones() {
+  const mx = state.settings.maxHr || 186;
+  return { z2: [Math.round(mx * 0.62), Math.round(mx * 0.70)], iv: [Math.round(mx * 0.85), Math.round(mx * 0.95)], mx };
+}
+function lastKraft(uebung, exceptId) {
+  const key = uebung.trim().toLowerCase();
+  for (const r of sessions()) {
+    if (r.id === exceptId) continue;
+    const k = r.d.kraft.find(x => x.uebung.toLowerCase() === key);
+    if (k) return { date: r.d.date, sets: k.sets };
+  }
+  return null;
+}
+function fmtSets(sets) {
+  if (!sets.length) return '';
+  const same = sets.every(x => x.wdh === sets[0].wdh && x.kg === sets[0].kg);
+  if (same) return sets.length + '×' + fmtNum(sets[0].wdh) + (sets[0].kg != null ? ' @ ' + fmtNum(sets[0].kg, 2) + ' kg' : '');
+  return sets.map(x => fmtNum(x.wdh) + '×' + (x.kg != null ? fmtNum(x.kg, 2) : '–')).join(', ');
+}
+function exerciseNames() {
+  const set = new Set(UEBUNGEN);
+  live('sessions').forEach(r => r.d.kraft.forEach(k => set.add(k.uebung)));
+  return [...set].sort((a, b) => a.localeCompare(b, 'de'));
+}
+function naechsteEinheit() {
+  const s = sessions().find(r => r.d.typ === 'tag1' || r.d.typ === 'tag2');
+  if (!s) return 'tag1';
+  return s.d.typ === 'tag1' ? 'tag2' : 'tag1';
+}
+
+/* ======================= Entwurf (Formular) ======================= */
+function newCardio(art, geraet) { return { art, geraet, min: '', avg: '', max: '', weste: '' }; }
+function newKraft(name) { return { uebung: name || '', sets: [{ wdh: '', kg: '' }, { wdh: '', kg: '' }, { wdh: '', kg: '' }] }; }
+function templateDraft(typ) {
+  const d = { date: ymd(), typ, cardio: [], kraft: [], rpe: '', knie: '', notiz: '' };
+  if (typ === 'tag1') {
+    d.cardio = [newCardio('intervall', 'Rad')];
+    d.kraft = ['Kniebeuge zur Bank', 'Rumänisches Kreuzheben', 'Latzug / Klimmzug', 'Core'].map(newKraft);
+  } else if (typ === 'tag2') {
+    d.cardio = [newCardio('zone2', 'Rad')];
+    d.kraft = ['Beinpresse', 'Bankdrücken', 'Rudern Langhantel', "Farmer's Walk"].map(newKraft);
+  } else if (typ === 'alltag') {
+    d.cardio = [newCardio('zone2', 'Gehen')];
+  }
+  return d;
+}
+function toDraft(d) {
+  const t = v => (v == null ? '' : String(v).replace('.', ','));
+  return {
+    date: d.date, typ: d.typ, rpe: t(d.rpe), knie: t(d.knie), notiz: d.notiz || '',
+    cardio: d.cardio.map(c => ({ art: c.art, geraet: c.geraet, min: t(c.min), avg: t(c.avg), max: t(c.max), weste: t(c.weste) })),
+    kraft: d.kraft.map(k => ({ uebung: k.uebung, sets: k.sets.map(x => ({ wdh: t(x.wdh), kg: t(x.kg) })) }))
+  };
+}
+
+/* ======================= Diagramme (SVG) ======================= */
+/* ======================= Ansichten ======================= */
+const VIEWS = [
+  { id: 'heute', label: 'Heute', ic: '●' },
+  { id: 'verlauf', label: 'Verlauf', ic: '≡' },
+  { id: 'tests', label: 'Tests', ic: '◆' },
+  { id: 'mehr', label: 'Mehr', ic: '…' }
+];
+
+function renderNav() {
+  document.getElementById('tabs').replaceChildren(...VIEWS.map(v =>
+    h('button', { 'aria-current': state.view === v.id ? 'page' : null, onclick: () => { state.view = v.id; render(); window.scrollTo(0, 0); } },
+      h('span', { class: 'ic', 'aria-hidden': 'true', text: v.ic }), v.label)));
+}
+
+function viewHeute() {
+  const today = ymd();
+  const ph = currentPhase(today);
+  const z = hrZones();
+  const nodes = [];
+  const next = naechsteEinheit();
+  const wk = weekStart(today);
+  const thisWeek = sessions().filter(r => weekStart(r.d.date) === wk && r.d.typ !== 'alltag').length;
+
+  const due = state.settings.lastExport ? daysBetween(ymd(new Date(state.settings.lastExport)), today) : null;
+  if (state.rec.size > 0 && (due == null || due > 14)) {
+    nodes.push(h('div', { class: 'card warn' },
+      h('h3', { text: 'Datensicherung fällig' }),
+      h('p', { class: 'muted', text: due == null ? 'Du hast noch keine Sicherung exportiert. Die Daten liegen nur auf diesem Gerät.' : `Letzte Sicherung vor ${due} Tagen. Die Daten liegen nur auf diesem Gerät.` }),
+      h('button', { class: 'btn small', onclick: exportData, text: 'Jetzt sichern' })));
+  }
+
+  nodes.push(h('div', { class: 'card accent' },
+    h('div', { class: 'row between' }, h('h3', { text: `Phase ${ph.id}: ${ph.name}` }), h('span', { class: 'muted', text: `${fmtShort(ph.von)}–${fmtShort(ph.bis)}${ph.bis.slice(0, 4)}` })),
+    h('p', { style: 'margin:4px 0', text: ph.fokus }),
+    h('p', { class: 'muted', style: 'margin:4px 0', text: `Kraft ${ph.kraft} · Zone 2 ${ph.zone2} · Weste ${ph.weste}` }),
+    countdownLine()));
+
+  nodes.push(h('h2', { text: 'Training starten' }));
+  Object.keys(TYPEN).forEach(t => {
+    nodes.push(h('button', { class: 'btn block' + (t === next ? ' primary' : ''), style: 'margin-bottom:8px', onclick: () => openSessionForm(null, t) },
+      TYPEN[t], t === next ? '  ← dran' : ''));
+  });
+  nodes.push(h('p', { class: 'muted', text: `Diese Woche: ${thisWeek} von 2 Studio-Einheiten.` }));
+
+  nodes.push(h('div', { class: 'card' },
+    h('h3', { text: 'Pulsbereiche (Richtwerte)' }),
+    h('p', { style: 'margin:4px 0', text: `Zone 2: ${z.z2[0]}–${z.z2[1]} bpm · Intervalle: ${z.iv[0]}–${z.iv[1]} bpm` }),
+    h('p', { class: 'muted', style: 'margin:4px 0', text: `Berechnet aus Max-Puls ${z.mx} (Schätzung 220 − Alter). Maßgeblich sind deine Apple-Watch-Zonen; Max-Puls kannst du unter „Mehr“ anpassen.` })));
+  return nodes;
+}
+function countdownLine() {
+  const d = state.settings.streckeDatum;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return h('p', { class: 'muted', style: 'margin:4px 0', text: 'Termin der Atemschutzstrecke: unter „Mehr“ eintragen.' });
+  const n = daysBetween(ymd(), d);
+  if (n < 0) return h('p', { class: 'muted', style: 'margin:4px 0', text: 'Der eingetragene Termin der Strecke liegt in der Vergangenheit.' });
+  return h('p', { style: 'margin:4px 0', text: `Atemschutzstrecke ${fmtDate(d)}: noch ${n} Tage (${Math.floor(n / 7)} Wochen).` });
+}
+
+function viewVerlauf() {
+  const list = sessions();
+  if (!list.length) return [h('div', { class: 'card' }, h('p', { text: 'Noch keine Einheit gespeichert. Starte unter „Heute“ dein erstes Training.' }))];
+  return list.map(r => {
+    const d = r.d;
+    const cardio = d.cardio.map(c => `${c.geraet || 'Cardio'} · ${ARTEN[c.art]} · ${fmtNum(c.min, 0)} min${c.avg ? ' · Ø ' + fmtNum(c.avg, 0) : ''}${c.max ? ' · max ' + fmtNum(c.max, 0) : ''}${c.weste ? ' · Weste ' + fmtNum(c.weste) + ' kg' : ''}`);
+    const kraft = d.kraft.map(k => `${k.uebung}: ${fmtSets(k.sets)}`);
+    return h('div', { class: 'card' },
+      h('div', { class: 'hist-title' }, h('span', { text: fmtDate(d.date) }), h('span', { class: 'pill', text: TYPEN[d.typ].split(' · ')[0] })),
+      cardio.length ? h('ul', { class: 'plain' }, cardio.map(t => h('li', { text: t }))) : null,
+      kraft.length ? h('ul', { class: 'plain' }, kraft.map(t => h('li', { text: t }))) : null,
+      h('p', { class: 'muted', style: 'margin:8px 0 0', text: [d.rpe != null ? `Anstrengung ${fmtNum(d.rpe, 0)}/10` : '', d.knie != null ? `Knie ${fmtNum(d.knie, 0)}/10` : '', d.notiz].filter(Boolean).join(' · ') }),
+      h('div', { class: 'row', style: 'margin-top:10px' },
+        h('button', { class: 'btn small', onclick: () => openSessionForm(r.id), text: 'Bearbeiten' }),
+        h('button', { class: 'btn small danger', onclick: async () => { if (confirm('Diese Einheit löschen?')) { await removeRec(r.id); toast('Gelöscht'); render(); } }, text: 'Löschen' })));
+  });
+}
+
+function testDelta(key, pts) {
+  if (pts.length < 2) return '';
+  const first = pts[0].y, last = pts[pts.length - 1].y;
+  const diff = last - first;
+  const T = TESTS[key];
+  const fmtD = v => (T.type === 'time' ? fmtTime(Math.abs(v)) : fmtNum(Math.abs(v), 1));
+  if (Math.abs(diff) < 1e-9) return 'unverändert seit Start';
+  const sign = diff > 0 ? '+' : '−';
+  let judge = '';
+  if (T.better === 'lower') judge = diff < 0 ? ' (besser)' : ' (schlechter)';
+  if (T.better === 'higher') judge = diff > 0 ? ' (besser)' : ' (schlechter)';
+  return `${sign}${fmtD(diff)} seit Start${judge}`;
+}
+function fmtTestVal(key, v) { return TESTS[key].type === 'time' ? fmtTime(v) : fmtNum(v, 1); }
+
+function viewTests() {
+  const out = [h('button', { class: 'btn primary block', style: 'margin-bottom:12px', onclick: () => openTestForm(), text: '+ Messwert eintragen' })];
+  const all = tests();
+  if (!all.length) out.push(h('div', { class: 'card warn' }, h('p', { text: 'Trage jetzt Ausgangswerte ein (2000 m Rudern, 12-Minuten-Test, Klimmzüge, Ruhepuls, Gewicht). Alle 6 Wochen wiederholen, dann siehst du den Fortschritt.' })));
+  Object.keys(TESTS).forEach(key => {
+    const rows = all.filter(r => r.d.test === key).sort((a, b) => a.d.date.localeCompare(b.d.date) || a._m - b._m);
+    if (!rows.length) return;
+    const pts = rows.map(r => ({ x: r.d.date, y: r.d.value }));
+    out.push(h('div', { class: 'card' },
+      h('div', { class: 'row between' }, h('h3', { text: TESTS[key].name }), h('span', { text: `${fmtTestVal(key, pts[pts.length - 1].y)} ${TESTS[key].type === 'time' ? '' : TESTS[key].unit}` })),
+      h('p', { class: 'muted', style: 'margin:0 0 6px', text: testDelta(key, pts) }),
+      h('details', { style: 'margin-top:8px' }, h('summary', { text: `Alle Messungen (${rows.length})` }),
+        rows.slice().reverse().map(r => h('div', { class: 'row between', style: 'padding:6px 0;border-bottom:1px solid var(--line)' },
+          h('span', { text: `${fmtShort(r.d.date)}${r.d.date.slice(0, 4)}: ${fmtTestVal(key, r.d.value)}${r.d.hr ? ' · Ø Puls ' + fmtNum(r.d.hr, 0) : ''}${r.d.note ? ' · ' + r.d.note : ''}` }),
+          h('button', { class: 'btn small danger', 'aria-label': 'Messwert löschen', onclick: async () => { if (confirm('Messwert löschen?')) { await removeRec(r.id); render(); } }, text: '×' }))))));
+  });
+  return out;
+}
+
+function viewMehr() {
+  const out = [];
+  const st = state.settings;
+  out.push(h('div', { class: 'card' },
+    h('h3', { text: 'Einstellungen' }),
+    h('div', { class: 'grid2' },
+      h('label', { class: 'f' }, 'Darstellung',
+        h('select', { onchange: e => { st.theme = e.target.value; saveSettings(); applyTheme(); }, value: st.theme },
+          h('option', { value: 'auto', text: 'Automatisch' }), h('option', { value: 'light', text: 'Hell' }), h('option', { value: 'dark', text: 'Dunkel' }))),
+      h('label', { class: 'f' }, 'Max-Puls (bpm)',
+        h('input', { type: 'text', inputmode: 'numeric', value: String(st.maxHr), onchange: e => { const v = clamp(num(e.target.value), 120, 230); if (v) { st.maxHr = Math.round(v); saveSettings(); toast('Gespeichert'); } e.target.value = String(st.maxHr); } }))),
+    h('label', { class: 'f', style: 'margin-top:10px' }, 'Termin Atemschutzstrecke',
+      h('input', { type: 'date', value: st.streckeDatum || '', onchange: e => { st.streckeDatum = e.target.value; saveSettings(); toast('Gespeichert'); } }))));
+  const sel = out[out.length - 1].querySelector('select');
+  if (sel) sel.value = st.theme;
+
+  out.push(h('div', { class: 'card' },
+    h('h3', { text: 'Daten' }),
+    h('p', { class: 'muted', text: `${live('sessions').length} Einheiten, ${tests().length} Messwerte. Alles liegt nur auf diesem Gerät. Sicherung mindestens alle 2 Wochen. Zum Auswerten die Sicherung am PC unter „Daten & Sicherung“ importieren.` }),
+    h('p', { class: 'muted', text: st.lastExport ? `Letzte Sicherung: ${new Date(st.lastExport).toLocaleString('de-DE')}` : 'Noch keine Sicherung exportiert.' }),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn primary', onclick: exportData, text: 'Sicherung exportieren' }),
+      h('label', { class: 'btn', style: 'display:inline-flex;align-items:center;cursor:pointer' }, 'Sicherung importieren',
+        h('input', { class: 'sr', type: 'file', accept: '.json,application/json', onchange: onImportFile }))),
+    h('p', { class: 'muted', id: 'persistinfo', text: '' })));
+
+  out.push(h('div', { class: 'card' },
+    h('h3', { text: 'Trainingsplan bis August 2027' }),
+    h('table', { class: 'plan' },
+      h('thead', {}, h('tr', {}, ['Phase', 'Zeitraum', 'Schwerpunkt'].map(t => h('th', { text: t })))),
+      h('tbody', {}, PHASES.map(p => h('tr', {},
+        h('td', { text: `${p.id} ${p.name}` }), h('td', { text: `${fmtShort(p.von)}–${fmtShort(p.bis)}${p.bis.slice(2, 4)}` }),
+        h('td', { text: `${p.fokus}. Kraft ${p.kraft}, Zone 2 ${p.zone2}, Weste ${p.weste}.` }))))),
+    h('p', { class: 'muted', text: 'Der Plan ist eine Orientierung, keine ärztliche Vorgabe. Bei Knieschmerzen über 3 von 10 oder Beschwerden beim Training bitte abklären lassen.' })));
+
+  out.push(h('div', { class: 'card' },
+    h('h3', { text: 'Über diese App' }),
+    h('p', { class: 'muted', text: `Version ${APP_VERSION}. Läuft offline, sobald sie einmal geladen wurde. Diese App ist nur zum Erfassen im Studio. Auswertung, Diagramme, Gewichtsverlauf und Verwaltung findest du in der PC-Anwendung (Ordner server, start-server.bat). Den Austausch machst du mit der Sicherungsdatei.` })));
+  persistInfo();
+  return out;
+}
+async function persistInfo() {
+  try {
+    if (navigator.storage && navigator.storage.persisted) {
+      const p = await navigator.storage.persisted();
+      const el = document.getElementById('persistinfo');
+      if (el) el.textContent = p ? 'Speicher: dauerhaft geschützt.' : 'Speicher: nicht dauerhaft geschützt. Bitte regelmäßig sichern und die App zum Home-Bildschirm hinzufügen.';
+    }
+  } catch (e) { /* optional */ }
+}
+
+/* ======================= Formulare ======================= */
+function lbl(text, input) { return h('label', { class: 'f' }, text, input); }
+function field(obj, key, opts = {}) {
+  return h('input', { type: 'text', inputmode: opts.mode || 'decimal', placeholder: opts.ph || '', list: opts.list || null, value: obj[key] == null ? '' : String(obj[key]), autocomplete: 'off',
+    oninput: e => { obj[key] = e.target.value; if (opts.after) opts.after(e.target.value); } });
+}
+
+function openSessionForm(id, typ) {
+  if (id) { state.draft = toDraft(state.rec.get(id).d); state.draftId = id; }
+  else { state.draft = templateDraft(typ || 'frei'); state.draftId = null; }
+  renderSessionForm();
+}
+function closeOverlay() { document.getElementById('overlay').replaceChildren(); state.draft = null; state.draftId = null; }
+
+function renderSessionForm() {
+  const d = state.draft;
+  const ov = document.getElementById('overlay');
+  const prevScroll = ov.firstChild ? ov.firstChild.scrollTop : 0;
+  const z = hrZones();
+  const body = [];
+  body.push(h('div', { class: 'grid2' },
+    lbl('Datum', h('input', { type: 'date', value: d.date, onchange: e => { d.date = e.target.value; } })),
+    lbl('Art', h('select', { onchange: e => { d.typ = e.target.value; } }, Object.keys(TYPEN).map(t => h('option', { value: t, text: TYPEN[t].split(' · ')[0] }))))));
+  body.push(h('h2', { text: 'Cardio' }));
+  d.cardio.forEach((c, i) => {
+    body.push(h('div', { class: 'block-box' },
+      h('div', { class: 'grid2' },
+        lbl('Art', h('select', { onchange: e => { c.art = e.target.value; } }, Object.keys(ARTEN).map(a => h('option', { value: a, text: ARTEN[a] })))),
+        lbl('Gerät', h('select', { onchange: e => { c.geraet = e.target.value; renderSessionForm(); } }, [h('option', { value: '', text: '–' }), ...GERAETE.map(g => h('option', { value: g, text: g }))]))),
+      h('div', { class: 'grid3', style: 'margin-top:8px' },
+        lbl('Dauer (min)', field(c, 'min', { ph: c.art === 'intervall' ? '30' : '45' })),
+        lbl('Ø Puls', field(c, 'avg', { mode: 'numeric', ph: c.art === 'zone2' ? `${z.z2[0]}–${z.z2[1]}` : '' })),
+        lbl('Max Puls', field(c, 'max', { mode: 'numeric' }))),
+      c.geraet === 'Stepper/Treppe' ? h('div', { style: 'margin-top:8px' }, lbl('Weste (kg)', field(c, 'weste'))) : null,
+      h('div', { class: 'row', style: 'margin-top:8px' }, h('button', { class: 'btn small danger', onclick: () => { d.cardio.splice(i, 1); renderSessionForm(); }, text: 'Block entfernen' }))));
+    const blk = body[body.length - 1];
+    const sels = blk.querySelectorAll('select');
+    sels[0].value = c.art; sels[1].value = c.geraet || '';
+  });
+  body.push(h('button', { class: 'btn small', onclick: () => { d.cardio.push(newCardio('zone2', 'Rad')); renderSessionForm(); }, text: '+ Cardio-Block' }));
+
+  body.push(h('h2', { text: 'Kraft' }));
+  d.kraft.forEach((k, i) => {
+    const last = k.uebung ? lastKraft(k.uebung, state.draftId) : null;
+    body.push(h('div', { class: 'block-box' },
+      lbl('Übung', h('input', { type: 'text', list: 'ex-list', value: k.uebung, autocomplete: 'off', oninput: e => { k.uebung = e.target.value; }, onchange: () => renderSessionForm() })),
+      last ? h('p', { class: 'muted', style: 'margin:4px 0', text: `Zuletzt (${fmtShort(last.date)}): ${fmtSets(last.sets)}` }) : null,
+      k.sets.map((x, j) => h('div', { class: 'set' },
+        h('span', { class: 'n', text: (j + 1) + '.' }),
+        lbl('Wdh.', field(x, 'wdh', { mode: 'numeric', ph: last && last.sets[j] && last.sets[j].wdh != null ? String(last.sets[j].wdh) : '' })),
+        lbl('kg', field(x, 'kg', { ph: last && last.sets[j] && last.sets[j].kg != null ? String(last.sets[j].kg).replace('.', ',') : '' })),
+        h('button', { class: 'btn small danger', 'aria-label': 'Satz entfernen', onclick: () => { k.sets.splice(j, 1); renderSessionForm(); }, text: '×' }))),
+      h('div', { class: 'row', style: 'margin-top:8px' },
+        h('button', { class: 'btn small', onclick: () => { k.sets.push({ wdh: '', kg: '' }); renderSessionForm(); }, text: '+ Satz' }),
+        last ? h('button', { class: 'btn small', onclick: () => { k.sets = last.sets.map(x => ({ wdh: x.wdh == null ? '' : String(x.wdh), kg: x.kg == null ? '' : String(x.kg).replace('.', ',') })); renderSessionForm(); }, text: 'Wie zuletzt' }) : null,
+        h('button', { class: 'btn small danger', onclick: () => { d.kraft.splice(i, 1); renderSessionForm(); }, text: 'Übung entfernen' }))));
+  });
+  body.push(h('button', { class: 'btn small', onclick: () => { d.kraft.push(newKraft('')); renderSessionForm(); }, text: '+ Übung' }));
+  body.push(h('datalist', { id: 'ex-list' }, exerciseNames().map(n => h('option', { value: n }))));
+
+  body.push(h('h2', { text: 'Gefühl' }));
+  body.push(h('div', { class: 'grid2' },
+    lbl('Anstrengung 1–10', field(d, 'rpe', { mode: 'numeric' })),
+    lbl('Knie links 0–10', field(d, 'knie', { mode: 'numeric' }))));
+  body.push(h('div', { style: 'margin-top:10px' }, lbl('Notiz', h('textarea', { oninput: e => { d.notiz = e.target.value; }, value: d.notiz }))));
+  body.push(h('div', { class: 'row', style: 'margin-top:16px' },
+    h('button', { class: 'btn primary', style: 'flex:1', onclick: saveSessionForm, text: 'Speichern' }),
+    h('button', { class: 'btn', onclick: closeOverlay, text: 'Abbrechen' })));
+
+  const modal = h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Einheit erfassen' },
+    h('div', { class: 'bar' }, h('h2', { text: state.draftId ? 'Einheit bearbeiten' : 'Einheit erfassen' }), h('button', { class: 'btn small', onclick: closeOverlay, text: 'Schließen' })),
+    h('div', { class: 'body' }, body));
+  modal.querySelectorAll('.body > .grid2 select')[0].value = d.typ;
+  ov.replaceChildren(modal);
+  modal.scrollTop = prevScroll;
+}
+
+async function saveSessionForm() {
+  const d = cleanSession(state.draft);
+  if (!d.cardio.length && !d.kraft.length) { toast('Bitte mindestens Cardio mit Dauer oder eine Übung mit Sätzen eintragen.'); return; }
+  const id = state.draftId || uid();
+  try {
+    await putRec({ id, col: 'sessions', _m: Date.now(), _d: false, d });
+    askPersist();
+    closeOverlay();
+    toast('Gespeichert');
+    render();
+  } catch (e) { toast('Speichern fehlgeschlagen: ' + (e && e.message ? e.message : e)); }
+}
+
+function openTestForm(preselect) {
+  const ov = document.getElementById('overlay');
+  const f = { test: preselect || 'rudern2000', date: ymd(), value: '', hr: '', note: '' };
+  const draw = () => {
+    const T = TESTS[f.test];
+    const modal = h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Messwert eintragen' },
+      h('div', { class: 'bar' }, h('h2', { text: 'Messwert eintragen' }), h('button', { class: 'btn small', onclick: closeOverlay, text: 'Schließen' })),
+      h('div', { class: 'body' },
+        lbl('Test', h('select', { onchange: e => { f.test = e.target.value; draw(); } }, Object.keys(TESTS).map(k => h('option', { value: k, text: TESTS[k].name })))),
+        h('div', { class: 'grid2', style: 'margin-top:10px' },
+          lbl('Datum', h('input', { type: 'date', value: f.date, onchange: e => { f.date = e.target.value; } })),
+          lbl(`Wert (${T.unit})`, field(f, 'value', { ph: T.type === 'time' ? '8:30' : '' }))),
+        T.hr ? h('div', { style: 'margin-top:10px' }, lbl('Ø Puls (optional)', field(f, 'hr', { mode: 'numeric' }))) : null,
+        h('div', { style: 'margin-top:10px' }, lbl('Notiz (Gerät, Last, Bedingungen)', h('textarea', { oninput: e => { f.note = e.target.value; }, value: f.note }))),
+        h('div', { class: 'row', style: 'margin-top:16px' },
+          h('button', { class: 'btn primary', style: 'flex:1', text: 'Speichern', onclick: async () => {
+            const value = T.type === 'time' ? parseTime(f.value) : num(f.value);
+            if (value == null) { toast(T.type === 'time' ? 'Bitte Zeit als mm:ss eintragen, z. B. 8:30.' : 'Bitte eine Zahl eintragen.'); return; }
+            const d = cleanTest({ test: f.test, date: f.date, value, hr: f.hr, note: f.note });
+            if (!d) { toast('Wert ungültig.'); return; }
+            await putRec({ id: uid(), col: 'tests', _m: Date.now(), _d: false, d });
+            askPersist(); closeOverlay(); toast('Gespeichert'); render();
+          } }),
+          h('button', { class: 'btn', onclick: closeOverlay, text: 'Abbrechen' }))));
+    modal.querySelector('select').value = f.test;
+    ov.replaceChildren(modal);
+  };
+  draw();
+}
+
+/* ======================= Export / Import ======================= */
+function buildExport() {
+  return {
+    app: 'fitness-tracker', schema: SCHEMA, version: APP_VERSION, exportedAt: new Date().toISOString(),
+    settings: { maxHr: state.settings.maxHr, streckeDatum: state.settings.streckeDatum },
+    records: [...state.rec.values()]
+  };
+}
+async function exportData() {
+  const json = JSON.stringify(buildExport(), null, 1);
+  const name = `fitness-tracker-${ymd()}.json`;
+  const file = new File([json], name, { type: 'application/json' });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: name });
+    } else {
+      const url = URL.createObjectURL(file);
+      const a = h('a', { href: url, download: name });
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    }
+    state.settings.lastExport = Date.now();
+    await saveSettings();
+    toast('Sicherung erstellt');
+    render();
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;
+    toast('Export fehlgeschlagen: ' + (e && e.message ? e.message : e));
+  }
+}
+async function onImportFile(ev) {
+  const file = ev.target.files && ev.target.files[0];
+  ev.target.value = '';
+  if (!file) return;
+  if (file.size > 20 * 1024 * 1024) { toast('Datei ist zu groß.'); return; }
+  try {
+    const obj = JSON.parse(await file.text());
+    const incoming = validateExport(obj);
+    const { toPut, stats } = mergeRecords([...state.rec.values()], incoming, Date.now());
+    await putMany(toPut);
+    if (obj.settings && !state.settings.streckeDatum && /^\d{4}-\d{2}-\d{2}$/.test(obj.settings.streckeDatum || '')) {
+      state.settings.streckeDatum = obj.settings.streckeDatum; await saveSettings();
+    }
+    toast(`Import: ${stats.neu} neu, ${stats.aktualisiert} aktualisiert, ${stats.geloescht} gelöscht, ${stats.unveraendert} unverändert`);
+    render();
+  } catch (e) {
+    toast(e instanceof SyntaxError ? 'Datei ist kein gültiges JSON.' : (e && e.message ? e.message : 'Import fehlgeschlagen'));
+  }
+}
+
+/* ======================= Rendering ======================= */
+function applyTheme() {
+  const t = state.settings.theme;
+  const dark = t === 'dark' || (t === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+  if (dark) document.documentElement.setAttribute('data-theme', 'dark'); else document.documentElement.removeAttribute('data-theme');
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', dark ? '#0E0E0E' : '#2B2B2B');
+}
+function render() {
+  const app = document.getElementById('app');
+  try {
+    const nodes = ({ heute: viewHeute, verlauf: viewVerlauf, tests: viewTests, mehr: viewMehr })[state.view]();
+    app.replaceChildren(...nodes);
+  } catch (e) {
+    app.replaceChildren(h('div', { class: 'card warn' }, h('h3', { text: 'Anzeigefehler' }), h('p', { class: 'muted', text: String(e && e.message ? e.message : e) })));
+  }
+  renderNav();
+  document.getElementById('topsub').textContent = fmtDate(ymd());
+}
+
+/* ======================= Start ======================= */
+async function init() {
+  applyTheme();
+  if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+  try {
+    db = await openDb();
+    await loadAll();
+  } catch (e) {
+    document.getElementById('app').replaceChildren(h('div', { class: 'card warn' }, h('h3', { text: 'Speicher nicht verfügbar' }),
+      h('p', { text: 'Der Browser erlaubt keinen lokalen Speicher (privater Modus?). Bitte die App im normalen Safari-Fenster öffnen.' })));
+    return;
+  }
+  applyTheme();
+  render();
+  registerWorker();
+}
+function registerWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  const ok = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  if (!ok) return;
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    const offer = w => {
+      const box = document.getElementById('toastbox');
+      box.replaceChildren(h('div', { class: 'toast', role: 'status' }, 'Neue Version verfügbar ',
+        h('button', { class: 'btn small', onclick: () => w.postMessage('skipWaiting'), text: 'Aktualisieren' })));
+    };
+    if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing;
+      if (!w) return;
+      w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) offer(w); });
+    });
+  }).catch(() => { /* Offline-Betrieb optional */ });
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloaded) return; reloaded = true; location.reload(); });
+}
+if (typeof window !== 'undefined') window.__ft = { mergeRecords, cleanSession, cleanTest, validateExport, parseTime, fmtTime, state };
+init();
+</script>
+</body>
+</html>

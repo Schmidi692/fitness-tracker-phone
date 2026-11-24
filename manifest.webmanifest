@@ -1,0 +1,17 @@
+{
+  "name": "Fitness-Tracker Atemschutz",
+  "short_name": "Fitness",
+  "description": "Trainingsplan und Tracking für G26.3 und Atemschutzstrecke, offline nutzbar.",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2B2B2B",
+  "theme_color": "#2B2B2B",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
