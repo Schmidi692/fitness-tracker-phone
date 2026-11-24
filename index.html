@@ -141,7 +141,7 @@
 
 /* ======================= Konstanten ======================= */
 const DB_NAME = 'fitness-tracker';
-const APP_VERSION = 'phone-1.1.0';
+const APP_VERSION = 'phone-1.2.0';
 const SCHEMA = 1;
 const COLLECTIONS = ['sessions', 'tests'];
 const CLOCK_SKEW_MS = 5 * 60 * 1000;
@@ -265,7 +265,7 @@ function cleanSession(d) {
     c = c && typeof c === 'object' ? c : {};
     return {
       art: Object.keys(ARTEN).includes(c.art) ? c.art : 'sonst', geraet: str(c.geraet, 40),
-      min: clamp(num(c.min), 0, 600), avg: clamp(num(c.avg), 30, 250), max: clamp(num(c.max), 30, 250), weste: clamp(num(c.weste), 0, 100)
+      min: clamp(num(c.min), 0, 600), avg: clamp(num(c.avg), 30, 250), max: clamp(num(c.max), 30, 250), watt: clamp(num(c.watt), 0, 1000), weste: clamp(num(c.weste), 0, 100)
     };
   }).filter(c => c.min > 0);
   const kraft = (Array.isArray(d.kraft) ? d.kraft : []).slice(0, 40).map(k => {
@@ -414,7 +414,16 @@ function naechsteEinheit() {
 }
 
 /* ======================= Entwurf (Formular) ======================= */
-function newCardio(art, geraet) { return { art, geraet, min: '', avg: '', max: '', weste: '' }; }
+const STARTWERTE = {
+  'Beinpresse': { wdh: 10, kg: 80 }, 'Bankdrücken': { wdh: 10, kg: 50 }, 'Latzug / Klimmzug': { wdh: 10, kg: 45 },
+  'Rudermaschine': { wdh: 10, kg: 40 }, 'Core': { wdh: 10, kg: 45 }, 'Hyperextensions': { wdh: 10, kg: null },
+  'Beinstrecker': { wdh: 10, kg: 25 }, 'Beinbeuger': { wdh: 10, kg: 25 }
+};
+function startSets(name) {
+  const s = STARTWERTE[(name || '').trim()];
+  return s ? [0, 1, 2].map(() => ({ wdh: s.wdh, kg: s.kg })) : null;
+}
+function newCardio(art, geraet) { return { art, geraet, min: '', avg: '', max: '', watt: '', weste: '' }; }
 function newKraft(name) { return { uebung: name || '', sets: [{ wdh: '', kg: '' }, { wdh: '', kg: '' }, { wdh: '', kg: '' }] }; }
 function templateDraft(typ) {
   const d = { date: ymd(), typ, cardio: [], kraft: [], rpe: '', knie: '', notiz: '' };
@@ -433,7 +442,7 @@ function toDraft(d) {
   const t = v => (v == null ? '' : String(v).replace('.', ','));
   return {
     date: d.date, typ: d.typ, rpe: t(d.rpe), knie: t(d.knie), notiz: d.notiz || '',
-    cardio: d.cardio.map(c => ({ art: c.art, geraet: c.geraet, min: t(c.min), avg: t(c.avg), max: t(c.max), weste: t(c.weste) })),
+    cardio: d.cardio.map(c => ({ art: c.art, geraet: c.geraet, min: t(c.min), avg: t(c.avg), max: t(c.max), watt: t(c.watt), weste: t(c.weste) })),
     kraft: d.kraft.map(k => ({ uebung: k.uebung, sets: k.sets.map(x => ({ wdh: t(x.wdh), kg: t(x.kg) })) }))
   };
 }
@@ -502,7 +511,7 @@ function viewVerlauf() {
   if (!list.length) return [h('div', { class: 'card' }, h('p', { text: 'Noch keine Einheit gespeichert. Starte unter „Heute“ dein erstes Training.' }))];
   return list.map(r => {
     const d = r.d;
-    const cardio = d.cardio.map(c => `${c.geraet || 'Cardio'} · ${ARTEN[c.art]} · ${fmtNum(c.min, 0)} min${c.avg ? ' · Ø ' + fmtNum(c.avg, 0) : ''}${c.max ? ' · max ' + fmtNum(c.max, 0) : ''}${c.weste ? ' · Weste ' + fmtNum(c.weste) + ' kg' : ''}`);
+    const cardio = d.cardio.map(c => `${c.geraet || 'Cardio'} · ${ARTEN[c.art]} · ${fmtNum(c.min, 0)} min${c.avg ? ' · Ø ' + fmtNum(c.avg, 0) : ''}${c.max ? ' · max ' + fmtNum(c.max, 0) : ''}${c.watt ? ' · Watt/Stufe ' + fmtNum(c.watt, 0) : ''}${c.weste ? ' · Weste ' + fmtNum(c.weste) + ' kg' : ''}`);
     const kraft = d.kraft.map(k => `${k.uebung}: ${fmtSets(k.sets)}`);
     return h('div', { class: 'card' },
       h('div', { class: 'hist-title' }, h('span', { text: fmtDate(d.date) }), h('span', { class: 'pill', text: TYPEN[d.typ].split(' · ')[0] })),
@@ -601,6 +610,10 @@ async function persistInfo() {
 }
 
 /* ======================= Formulare ======================= */
+function hint(last, start, j, key) {
+  const src = (last && last.sets[j]) || (start && start[j]);
+  return src && src[key] != null ? String(src[key]).replace('.', ',') : '';
+}
 function lbl(text, input) { return h('label', { class: 'f' }, text, input); }
 function field(obj, key, opts = {}) {
   return h('input', { type: 'text', inputmode: opts.mode || 'decimal', placeholder: opts.ph || '', list: opts.list || null, value: obj[key] == null ? '' : String(obj[key]), autocomplete: 'off',
@@ -633,7 +646,7 @@ function renderSessionForm() {
         lbl('Dauer (min)', field(c, 'min', { ph: c.art === 'intervall' ? '30' : '45' })),
         lbl('Ø Puls', field(c, 'avg', { mode: 'numeric', ph: c.art === 'zone2' ? `${z.z2[0]}–${z.z2[1]}` : '' })),
         lbl('Max Puls', field(c, 'max', { mode: 'numeric' }))),
-      c.geraet === 'Stepper/Treppe' ? h('div', { style: 'margin-top:8px' }, lbl('Weste (kg)', field(c, 'weste'))) : null,
+      h('div', { class: 'grid2', style: 'margin-top:8px' }, lbl('Ø Watt / Stufe', field(c, 'watt', { mode: 'numeric' })), c.geraet === 'Stepper/Treppe' ? lbl('Weste (kg)', field(c, 'weste')) : h('span')),
       h('div', { class: 'row', style: 'margin-top:8px' }, h('button', { class: 'btn small danger', onclick: () => { d.cardio.splice(i, 1); renderSessionForm(); }, text: 'Block entfernen' }))));
     const blk = body[body.length - 1];
     const sels = blk.querySelectorAll('select');
@@ -644,16 +657,19 @@ function renderSessionForm() {
   body.push(h('h2', { text: 'Kraft' }));
   d.kraft.forEach((k, i) => {
     const last = k.uebung ? lastKraft(k.uebung, state.draftId) : null;
+    const start = !last && k.uebung ? startSets(k.uebung) : null;
     body.push(h('div', { class: 'block-box' },
       lbl('Übung', h('input', { type: 'text', list: 'ex-list', value: k.uebung, autocomplete: 'off', oninput: e => { k.uebung = e.target.value; }, onchange: () => renderSessionForm() })),
       last ? h('p', { class: 'muted', style: 'margin:4px 0', text: `Zuletzt (${fmtShort(last.date)}): ${fmtSets(last.sets)}` }) : null,
+      start ? h('p', { class: 'muted', style: 'margin:4px 0', text: `Startwert (Vorschlag): ${fmtSets(start)}` }) : null,
       k.sets.map((x, j) => h('div', { class: 'set' },
         h('span', { class: 'n', text: (j + 1) + '.' }),
-        lbl('Wdh.', field(x, 'wdh', { mode: 'numeric', ph: last && last.sets[j] && last.sets[j].wdh != null ? String(last.sets[j].wdh) : '' })),
-        lbl('kg', field(x, 'kg', { ph: last && last.sets[j] && last.sets[j].kg != null ? String(last.sets[j].kg).replace('.', ',') : '' })),
+        lbl('Wdh.', field(x, 'wdh', { mode: 'numeric', ph: hint(last, start, j, 'wdh') })),
+        lbl('kg', field(x, 'kg', { ph: hint(last, start, j, 'kg') })),
         h('button', { class: 'btn small danger', 'aria-label': 'Satz entfernen', onclick: () => { k.sets.splice(j, 1); renderSessionForm(); }, text: '×' }))),
       h('div', { class: 'row', style: 'margin-top:8px' },
         h('button', { class: 'btn small', onclick: () => { k.sets.push({ wdh: '', kg: '' }); renderSessionForm(); }, text: '+ Satz' }),
+        start ? h('button', { class: 'btn small', onclick: () => { k.sets = start.map(x => ({ wdh: String(x.wdh), kg: x.kg == null ? '' : String(x.kg) })); renderSessionForm(); }, text: 'Startwert übernehmen' }) : null,
         last ? h('button', { class: 'btn small', onclick: () => { k.sets = last.sets.map(x => ({ wdh: x.wdh == null ? '' : String(x.wdh), kg: x.kg == null ? '' : String(x.kg).replace('.', ',') })); renderSessionForm(); }, text: 'Wie zuletzt' }) : null,
         h('button', { class: 'btn small danger', onclick: () => { d.kraft.splice(i, 1); renderSessionForm(); }, text: 'Übung entfernen' }))));
   });
