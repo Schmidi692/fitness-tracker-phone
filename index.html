@@ -166,8 +166,8 @@ const TYPEN = {
 const ARTEN = { zone2: 'Zone 2 (locker)', intervall: 'Intervalle', sonst: 'Sonstiges / Aufwärmen' };
 const GERAETE = ['Rad', 'Rudern', 'Crosstrainer', 'Stepper/Treppe', 'Laufband', 'Gehen'];
 const UEBUNGEN = [
-  'Kniebeuge zur Bank', 'Rumänisches Kreuzheben', 'Latzug / Klimmzug', 'Core', 'Beinpresse', 'Bankdrücken',
-  'Schulterdrücken', 'Rudern Langhantel', "Farmer's Walk", 'Kreuzheben', 'Hip Thrust', 'Seitstütz'
+  'Beinpresse', 'Hyperextensions', 'Latzug / Klimmzug', 'Core', 'Beinstrecker', 'Beinbeuger', 'Bankdrücken',
+  'Rudermaschine', 'Hang an der Stange (Sek.)', 'Griffkrafttrainer (Zuhause)', 'Schulterdrücken', 'Hip Thrust', 'Seitstütz'
 ];
 const TESTS = {
   rudern2000: { name: 'Rudern 2000 m', unit: 'mm:ss', type: 'time', better: 'lower', hr: true },
@@ -420,10 +420,10 @@ function templateDraft(typ) {
   const d = { date: ymd(), typ, cardio: [], kraft: [], rpe: '', knie: '', notiz: '' };
   if (typ === 'tag1') {
     d.cardio = [newCardio('intervall', 'Rad')];
-    d.kraft = ['Kniebeuge zur Bank', 'Rumänisches Kreuzheben', 'Latzug / Klimmzug', 'Core'].map(newKraft);
+    d.kraft = ['Beinpresse', 'Hyperextensions', 'Latzug / Klimmzug', 'Core'].map(newKraft);
   } else if (typ === 'tag2') {
     d.cardio = [newCardio('zone2', 'Rad')];
-    d.kraft = ['Beinpresse', 'Bankdrücken', 'Rudern Langhantel', "Farmer's Walk"].map(newKraft);
+    d.kraft = ['Beinstrecker', 'Beinbeuger', 'Bankdrücken', 'Rudermaschine', 'Hang an der Stange (Sek.)'].map(newKraft);
   } else if (typ === 'alltag') {
     d.cardio = [newCardio('zone2', 'Gehen')];
   }

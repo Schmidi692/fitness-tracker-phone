@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = 'v1.1.0';
+const VERSION = 'v1.1.1';
 const CACHE = 'fitness-' + VERSION;
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
